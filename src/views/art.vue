@@ -1,7 +1,10 @@
 <template>
 
+
+
   <Layout style="margin-top: 50px;background: #FFF;">
         <Content :style="{margin: '15px 5px 0', }">
+
           <div v-if="isShowPass">
                 <Content style="width: 350px;margin: 120px auto;text-align: center;padding: 40px 10px; border-radius: 10px; box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);">
                   <Form inline @submit.native.prevent>
@@ -18,11 +21,16 @@
                 </Content>
           </div>
           <div v-else>
-            <viewer :images="imglist">
+            <viewer class="viewerclass" :images="imglist" :options="options">
               <Row class="animate__animated animate__fadeIn animate__delay-1.5s">
                 <Col flex="1" v-for="(item,index) in imglist" :key="index">
                   <div class="imgdivstyle" >
-                    <img :class="[viewType==1?'imgstyle-max':'imgstyle-min']"  class="imgstyle" style="cursor:pointer;" :src="item.imgurl+''"  onerror="this.src='http://tc.hellohao.cn/img/img404.jpg'" >
+                    <div class="dimback" style="display: inline-block;">
+                    <img :class="[item.viewed==true?'imgstyle-max dim':'imgstyle-max']"  class="imgstyle" style="cursor:pointer;" :src="item.imgurl+''"
+                         :id="item.id"
+                          :alt="item.imgjson"
+                    >
+                    </div>
                         <div class="img-tool-cover" :style="{bottom:toolBottom+ 'px'}">
                           <Icon style="cursor:pointer;" type="ios-book icostyle" @click.native="imgInfo(item)" title="信息"></Icon>
                         </div>
@@ -30,21 +38,21 @@
                 </Col>
               </Row>
             </viewer>
-            <div class="example-code-more">
-              <Button type="dashed" :loading="nextButloading"  @click="selectPhoto" :disabled="btntext=='所有数据加载完毕'" long>{{btntext}}</Button>
-            </div>
+            <Page :page-size-opts="pagination.options" v-model="pagination.current" :page-size="pagination.pageSize" :total="pagination.total" @on-change="onCurrentChange" @on-page-size-change="onPageSizeChange" @on-prev="onPrev" @on-next="onNext" show-elevator show-sizer show-total/>
           </div>
-
+          <div :class="viewerBtn">
+            <a href="javascript:" id="zoom_in"  @click="clickzoomin"><i class="fa fa-search-plus">&nbsp;放大</i></a>
+            <a href="javascript:" id="zoom_out" @click="clickzoomout"><i class="fa fa-search-minus">&nbsp;缩小</i></a>
+            <a href="javascript:" id="prev" @click="clickprev"><i class="fa fa-chevron-left">&nbsp;上一张</i></a>
+            <a href="javascript:" id="next" @click="clicknext"><i class="fa fa-chevron-right">&nbsp;下一张</i></a>
+<!--            <a href="javascript:" id="rotate_left" @click="clickzoomin"><i class="fa fa-rotate-left">&nbsp;左旋转</i></a>-->
+<!--            <a href="javascript:" id="rotate_right" @click="clickzoomin"><i class="fa fa-rotate-right">&nbsp;右旋转</i></a>-->
+            <a href="javascript:" id="close" @click="clickclose" style="background-color: #FF5722"><i class="fa fa-close">&nbsp;关闭</i></a>
+            <a href="javascript:" id="close" @click="clickcopyurl" style="background-color: #FF5722"><i class="fa fa-close">&nbsp;复制链接</i></a>
+            <a href="javascript:" id="close" @click="clickopeninnewtab" style="background-color: #FF5722"><i class="fa fa-close">&nbsp;在新标签页打开链接</i></a>
+          </div>
         </Content>
         <!--详细信息-->
-        <Modal  v-model="isimginfo" :footer-hide="true">
-          <List :split="false" >
-            <ListItem><span style="text-overflow: ellipsis;white-space: nowrap;overflow: hidden;"><Icon style="font-size: 32px;" type="ios-book" />&nbsp;&nbsp;&nbsp;<span style="font-size: 18px;"> 描述 </span></span></ListItem>
-          </List>
-          <div style="line-height: 40px;">
-            <p><span class="infotitle">&nbsp;&nbsp;</span><span style="font-size: 14px;">{{(imgage==null || imgage=='')?'无':imgage.notes}}</span></p>
-          </div>
-        </Modal>
       </Layout>
 
 </template>
@@ -78,7 +86,9 @@ export default {
 
   name: "art",
   data () {
+    var _this=this;
     return {
+      viewerBtn:"not-display",
       isShowPass:false,
       urlKey:null,
       password:null,
@@ -90,8 +100,36 @@ export default {
       imgage:null,
       isimginfo:false,
       imglist: [],
-      pageNum:1,
-      pageSize:20,
+      pagination: {
+        pageNum : 1,
+        pageSize : 48,
+        total : 100,
+        options : [10,20,48,50,100]
+      },
+      options:{
+        viewed (e) {
+          console.log(e.type)
+
+          var id = _this.markViewed();
+          // var viewer = _this.$el.querySelector('.viewerclass').viewer;
+          // var id=viewer.image.id
+          console.log(id)
+          var img = document.getElementById(id);
+          img.classList.add("dim")
+          // img.add("dim")
+        },
+        show(e){
+          console.log(e.type)
+          _this.viewerBtn = "viewer-btn"
+        },
+        hide (e) {
+          console.log(e.type)
+          _this.viewerBtn = "not-display"
+
+        }
+      },
+      // pageNum:1,
+      // pageSize:20,
       selecttype:2,
       type:'picture',
       selectIndex:[],
@@ -106,12 +144,75 @@ export default {
   },
 
   methods: {
+    clickzoomin(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.zoom(0.1);
+    },
+    clickzoomout(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.zoom(-0.1);
+    },
+    clickprev(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.prev();
+    },
+    clicknext(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.next();
+    },
+    clickclose(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.hide();
+    },
+    clickcopy(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      viewer.hide();
+    },
+    clickcopyurl(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      var originurl = viewer.image.alt;
+      var expains = JSON.parse(originurl).explains
+      console.log(expains)
+      navigator.clipboard.writeText(expains)
+    },
+    clickopeninnewtab(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      var originurl = viewer.image.alt;
+      var expains = JSON.parse(originurl).explains
+      console.log(expains)
+      window.open(expains, '_blank').focus()
+    },
+    picShow: function (e) {
+      // v-bind:class="myclass"
+      console.log(e.type);
+      this.viewerBtn = "viewer-btn"
+    },
+    onClickImg(){
+      this.viewerBtn = "viewer-btn"
+    },
+    onPageSizeChange(size){
+      this.pagination.pageSize = size;
+      this.pagination.pageNum = 1;
+      this.selectPhoto()
+    },
+    onCurrentChange(current){
+      this.pagination.pageNum = current;
+      this.selectPhoto()
+    },
+    onPrev(current){
+      this.pagination.pageNum = current;
+      this.selectPhoto()
+    },
+    onNext(current){
+      this.pagination.pageNum = current;
+      this.selectPhoto()
+    },
     selectPhoto(){
       // this.$Spin.show();
       this.nextButloading=true;
       var paramJson={};
-      paramJson.pageNum=this.pageNum;
-      paramJson.pageSize=this.pageSize;
+      paramJson.pageNum=this.pagination.pageNum;
+      paramJson.pageSize=this.pagination.pageSize;
       paramJson.albumkey = 'TOALBUM'+this.urlKey;
       paramJson.password = this.password;
 
@@ -126,9 +227,20 @@ export default {
             var arr = res.data.data.imagesList.rows;
             this.nextButloading=false;
             if(arr.length>0){
-              this.imglist=this.imglist.concat(arr);
-              this.pageNum++;
-              if(this.imglist.length<=this.pageSize){
+              this.imglist=arr;
+              // this.imglist=this.imglist.concat(arr);
+              // this.pagination.pageNum++;
+              var newList=[];
+              for (let i=0; i<arr.length; i++){
+                var imgInfo={}
+                imgInfo.mainImage = arr[i].imgurl;
+                imgInfo.explains = arr[i].explains;
+                newList[i] = imgInfo
+                arr[i].imgjson=JSON.stringify(arr[i])
+              }
+              console.log(newList)
+              this.imglist = arr;
+              if(this.imglist.length<this.pagination.pageSize){
                 this.btntext='所有数据加载完毕';
               }else{
                 this.btntext='加载更多';
@@ -149,7 +261,59 @@ export default {
         this.$Message.error('服务器请求错误');
       })
     },
+    countPhoto(){
+      // this.$Spin.show();
+      this.nextButloading=true;
+      var paramJson={};
+      paramJson.albumkey = 'TOALBUM'+this.urlKey;
 
+      request(
+          "/countAlbum",
+          paramJson).then(res => {
+        console.log(res);
+        if(res.status==200){
+          var json = res.data;
+          if(json.code=='200'){
+            this.isShowPass=false;
+            var count = res.data.data.count;
+            this.pagination.total = count;
+          }else{
+            this.$Message.warning(json.info);
+          }
+        }else{
+          this.$Message.error("请求时出现错误");
+        }
+        // this.$Spin.hide();
+      }).catch(err => {
+        // this.$Spin.hide();
+        console.log(err);
+        this.$Message.error('服务器请求错误');
+      })
+    },
+    markViewed(){
+      var viewer = this.$el.querySelector('.viewerclass').viewer;
+      var originurl = viewer.image.alt;
+      var id = JSON.parse(originurl).id
+      // this.$Spin.show();
+      this.nextButloading=true;
+      var paramJson={};
+      paramJson.albumkey = 'TOALBUM'+this.urlKey;
+
+      request(
+          "/img/markViewed",
+          id).then(res => {
+        console.log(res);
+        if(res.status!=200){
+          this.$Message.error("请求时出现错误");
+        }
+        // this.$Spin.hide();
+      }).catch(err => {
+        // this.$Spin.hide();
+        console.log(err);
+        this.$Message.error('服务器请求错误');
+      })
+      return id
+    },
     imgInfo (e) {
       this.isimginfo = true;
       // this.getBucketName(e.source);
@@ -180,40 +344,46 @@ export default {
       },1000);
 
     },
+    generateImgInfoJson(image){
+      console.log(image)
+      var parse = JSON.parse(image);
+      return parse
+    },
     getAlbum(){
       var param={
         key:'TOALBUM'+this.urlKey
       }
-      request(
-          "/checkPass",
-          param).then(res => {
-        if(res.status==200){
-          var json = res.data.data;
-          if(res.data.code=='200'){
-            if(json.exist){
-              //有画廊
-              this.titlename = json.album.albumtitle;
-              if(json.passType){
-                this.isShowPass=true;
-              }else{
+      // request(
+      //     "/checkPass",
+      //     param).then(res => {
+      //   if(res.status==200){
+      //     var json = res.data.data;
+      //     if(res.data.code=='200'){
+      //       if(json.exist){
+      //         //有画廊
+      //         this.titlename = json.album.albumtitle;
+      //         if(json.passType){
+      //           this.isShowPass=true;
+      //         }else{
                 this.isShowPass=false;
+                this.countPhoto();
                 this.selectPhoto();
-              }
-            }else{
-              // 无画廊
-              this.$Message.warning("画廊不存在");
-            }
-          }else{
-            this.$Message.error("请求时出现错误");
-          }
-        }else{
-          this.$Message.error("请求时出现错误");
-        }
-      }).catch(err => {
-        // this.$Spin.hide();
-        console.log(err);
-        this.$Message.error('服务器请求错误');
-      })
+      //         }
+      //       }else{
+      //         // 无画廊
+      //         this.$Message.warning("画廊不存在");
+      //       }
+      //     }else{
+      //       this.$Message.error("请求时出现错误");
+      //     }
+      //   }else{
+      //     this.$Message.error("请求时出现错误");
+      //   }
+      // }).catch(err => {
+      //   // this.$Spin.hide();
+      //   console.log(err);
+      //   this.$Message.error('服务器请求错误');
+      // })
     },
 
     },
@@ -224,6 +394,7 @@ export default {
     //this.selectPhoto();
   },
   components:{
+    // BrowseIcon
     // vueQr,
   },
   // metaInfo(){
@@ -243,10 +414,59 @@ export default {
 
 
 }
-
+import { BrowseIcon } from 'tdesign-icons-vue';
 </script>
 
 <style>
+.dim{
+  opacity:0.6; filter: alpha(opacity=60);
+}
+/*图片样式*/
+#picView {
+  width: 100%;
+  margin: 0 auto;
+  font-size: 0;
+}
+
+#picView li {
+  display: inline-block;
+  width: 200px;
+  margin-left: 1%;
+  padding-top: 1%;
+}
+
+#picView li img {
+  width: 200px;
+}
+/*按钮主要样式*/
+.viewer-btn {
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  text-align: center;
+  z-index: 10000;
+}
+.not-display{
+  display: none;
+}
+.viewer-btn a {
+  background-color: #1E9FFF;
+  border: none;
+  color: white;
+  padding: 18px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.viewer-btn a i {
+  font-size: 20px;
+}
 .example-code-more {
   text-align: center;
   cursor: pointer;
@@ -262,6 +482,16 @@ export default {
   /*background: #e86868;*/
   text-align: center;
   margin-right: 2px;
+}
+.dimback{
+  background: #000;
+  width: 300px;
+  height: 160px;
+  object-fit: cover;
+  border-radius:5px;
+  border: 1px solid #eee;
+  box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 10px 0px;
+  transform: translateZ(0);
 }
 .imgstyle-max{
   width: 300px;
@@ -341,4 +571,5 @@ export default {
   bottom: 10px;
   opacity: 0.7;
 }
+
 </style>

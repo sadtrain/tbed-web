@@ -79,6 +79,7 @@
           </div>
         </div>
       </Upload>
+
       <Modal  v-model="visible" :footer-hide="true"  width="620" >
         <Tabs>
           <TabPane label="画廊" icon="ios-images" >
@@ -121,6 +122,124 @@
         </div>
       </Modal>
 
+      <!--URL上传窗-->
+      <Modal  v-model="urlUploadMsg" :footer-hide="true">
+        <br />
+        <Form  @submit.native.prevent>
+          <FormItem >
+            <Input @on-change="onGetLines" type="textarea" v-model="imgUrl" :rows="5"   placeholder="图像链接请按照每行一条填写(部分非直链图像或防盗链图像可能会转存失败)" />
+          </FormItem>
+          <p style="text-align: center;color: #d55757;" v-show="tempURLErr" >您所输入的行数已经超过单次可上传的数量</p>
+          <p style="text-align: center;color: #5f5f5f;" v-text="'单次批量上传 '+tempLink+'/'+this.uploadInfo.imgcount"></p>
+          <FormItem>
+            <Button :disabled="tempURLErr" type="primary" :loading="loading" icon="md-cloud-upload" long shape="circle" @click="uploadForUrl" >UPLOAD</Button>
+          </FormItem>
+        </Form>
+      </Modal>
+
+      <!--上传期限-->
+      <Modal  v-model="termMsg" :footer-hide="true">
+        <br />
+        <Form  @submit.native.prevent>
+          <FormItem label="文件有效期">
+            <Select v-model="data.day" style="width:100px" @on-change="selectTerm">
+              <Option v-for="item in dayList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+            </Select>
+          </FormItem>
+        </Form>
+      </Modal>
+
+    </div>
+  </Card>
+
+  <Card id="box1" class="mycard upcard img_list_box animate__animated  animate__delay-0.8s animate__fadeInUp"
+        :class="{'Hollowed':false,'testback':true}">
+    <div class="img_list_arr" style="text-align:center;">
+      <div class="demo-upload-list animate__animated animate__delay-1.5s  animate__fadeIn" v-for="(item,index) in uploadList" v-bind:key="item.uid">
+        <template v-if="item.status === 'finished'" >
+          <img style="cursor:pointer;"  preview="2" :data-pswp-uid="index" :preview-text="item.name"  :src="item.response.data.url" />
+          <div class="demo-upload-list-cover">
+            <Icon type="md-checkmark-circle" style="margin: 0 5px;" :style="{color:(selectIndexUid.indexOf(item.uid)>=0?'#43b984':'#c7c7c7')}" @click.native="clickImg(item.response.data.imguid,item.uid)" title="选择"></Icon>
+            <Icon type="md-trash"  style="margin: 0 5px;" @click.native="handleRemove(item)" title="删除图像"></Icon>
+            <Icon type="md-git-branch"  style="margin: 0 5px;" @click.native="getImgLink(item)" title="分享链接"></Icon>
+          </div>
+        </template>
+        <template v-else>
+          <Progress v-if="item.showProgress" :percent="item.percentage" hide-info></Progress>
+        </template>
+      </div>
+      <Upload
+          ref="upload"
+          :paste="true"
+          :disabled="getUploadSwitch"
+          :show-upload-list="false"
+          :default-file-list="defaultList"
+          :max-size="uploadInfo.filesize"
+          :on-success="handleSuccess"
+          :on-format-error="handleFormatError"
+          :on-exceeded-size="handleMaxSize"
+          :before-upload="handleBeforeUpload"
+          :on-error="uploadError"
+          :multiple="true"
+          :data="data"
+          :headers="headers"
+          :action="this.$http.defaults.baseURL+'/uploadForFile'"
+          type="drag"
+          style="display:contents;width:120px;">
+        <div style="width: 100%;height:118px;">
+          <div style="width: 98px;height: 64px;margin: 0px auto;text-align: center;position: absolute;left: 0;right: 0;top: 30px;" v-show="!getUploadSwitch">
+            <Icon type="ios-camera" size="36"></Icon>
+            <p style="text-align: center;color: #515a6e;font-size: xx-small;">拖拽文件到此处</p>
+          </div>
+          <div style="height: 64px;margin: 0px auto;text-align: center;position: absolute;left: 0;right: 0;top: 30px;" v-show="getUploadSwitch">
+            <p style="text-align: center;color: #515a6e;font-size: x-small;">{{this.uploadInfo.uploadInfo}}</p>
+          </div>
+        </div>
+      </Upload>
+      <Modal  v-model="visible" :footer-hide="true"  width="620" >
+        <Tabs>
+          <TabPane label="画廊" icon="ios-images" >
+            <album-list :albumlist="albumlist"  @return-data='returnData' />
+          </TabPane>
+          <TabPane label="更多" icon="ios-filing" disabled>更多功能待开发</TabPane>
+        </Tabs>
+      </Modal>
+
+      <Modal  v-model="IsImgLink" :footer-hide="true" >
+        <br />
+        <List  :split="false" >
+          <ListItem>
+            <Input v-model="imgLinkForUrl" class="cobyOrderSn" data-clipboard-action="copy" :data-clipboard-text="imgLinkForUrl" @click.native="copy" ><span slot="prepend">U R L</span></Input>
+          </ListItem>
+          <ListItem >
+            <Input v-model="imgLinkForHtml" class="cobyOrderSn" data-clipboard-action="copy" :data-clipboard-text="imgLinkForHtml" @click.native="copy" ><span slot="prepend">HTML</span></Input>
+          </ListItem>
+          <ListItem >
+            <Input v-model="imgLinkForMD" class="cobyOrderSn" data-clipboard-action="copy" :data-clipboard-text="imgLinkForMD" @click.native="copy" ><span slot="prepend">Markdown</span></Input>
+          </ListItem>
+        </List>
+      </Modal>
+
+      <Modal  v-model="isAlbum" :footer-hide="true" :title="albumData.title">
+        <Form  @submit.native.prevent :label-width="70" style="margin-top: 30px;" >
+          <FormItem label="链接">
+            <Input v-model="albumData.url" style="width: auto;width: 100%"  />
+          </FormItem>
+          <FormItem label="密码">
+            <Input v-model="albumData.password" style="width: auto;width: 100px;"  />
+            <Button style="position: absolute;right: 30px;" size="small" type="primary" shape="circle" class="cobyOrderSn" data-clipboard-action="copy" :data-clipboard-text="'画廊链接：'+albumData.url+'提取码：'+albumData.password+' 复制这段内容后用浏览器打开，即可查看画廊哦'" @click.native="copy">复 制</Button>
+          </FormItem>
+        </Form>
+        <div class="QRCodestyle" v-if="albumData.url" style="text-align: center;">
+          <vue-qr  :text="albumData.url" :size="200"></vue-qr>
+        </div>
+        <div style="text-align: center;">
+          <p>对方通过扫码即可访问画廊</p>
+        </div>
+      </Modal>
+      <div>
+        <t-pagination :total="50" :page-size="10" :current="1"/>
+      </div>
       <!--URL上传窗-->
       <Modal  v-model="urlUploadMsg" :footer-hide="true">
         <br />

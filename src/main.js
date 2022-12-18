@@ -23,6 +23,9 @@ import img404 from './assets/img/img404.jpg'
 import imgloading from './assets/img/imgloading.gif'
 import contentmenu from 'v-contextmenu'
 import 'v-contextmenu/dist/index.css'
+import TDesign from 'tdesign-vue';
+// 引入组件库全局样式资源
+import 'tdesign-vue/es/style/index.css';
 
 Vue.config.productionTip = false
 
@@ -30,6 +33,7 @@ Vue.prototype.clipboard = clipboard
 Vue.prototype.$store = store
 Vue.prototype.$http = axios;
 Vue.prototype.$locStorage = locStorage;
+Vue.use(TDesign);
 
 function getWebInfo () {
   return new Promise((resolve, reject) => {
